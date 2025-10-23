@@ -68,7 +68,7 @@ def get_face_embedding_fr(image, model='small'):
     encodings = face_recognition.face_encodings(rgb, boxes)
     return encodings[0], boxes[0] # encoding and box
 
-def skin_mask_from_landmarks(image, face_location):
+def skin_mask_from_landmarks(image, face_location) -> float : 
     """ 
     Description
         Create a mask for face-skin region using face_landmarks
@@ -111,3 +111,49 @@ def skin_mask_from_landmarks(image, face_location):
     # normalize to 0..1
     mask_f = (mask.astype(np.float32) / 255.0)
     return mask_f  # float mask 0..1
+
+def change_skin_color(image_bgr, face_location, target_rgb=(0,128,251), strenght=0.85):
+    """ 
+    Description
+        Change the skin region color toward target_rgb
+    ---------
+    Vabs
+        image_bgr: input OpenCV BGR image
+        face_location: (top,right,bottom,left)
+        target_rgb: tuple (R,G,B) target color to push skin towards
+        strength: [0,1] how strongly to push skin pixels toward target color in LAB space
+    ---------
+    Returns
+        new BGR image (uint8)
+    """
+    img = image_bgr.copy().astype(np.float32)
+    mask = skin_mask_from_landmarks(image_bgr, face_location)
+    if mask.sum() > 10:
+        top, right, bottom, left = face_location
+        mask = np.zeros(img.shape[:2], dtype=np.float32)
+        mask[top:bottom, left:right] = 1.0
+
+    rgb = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB).astype(np.floaat32)/255.0
+    lab = color.rgb2lab(rgb)
+
+    target_lab = rgb_to_lab(target_rgb)
+
+    # For pixels in mask, move their LAB toward target_lab by strength
+    preserve_lightness = True #keep facial features visible
+    alpha = strenght
+
+    mask_3 = np.stack([mask, mask, mask], axis = 2)
+    if preserve_lightness:
+        lab_new = lab.copy()
+        lab_new[:,:,1] = lab[:,:,1] * (1-mask) + (lab[:,:,1] * (1-alpha) + alpha*target_lab[1]) * mask
+        lab_new[:,:,2] = lab[:,:,2] * (1-mask) + (lab[:,:,2] * (1-alpha) + alpha*target_lab[2]) * mask
+        # Optionally slightly shift L to make "light/dark" target effect:
+        lab_new[:,:,0] = lab[:,:,0] * (1-mask) + (lab[:,:,0] * (1-alpha*0.35) + alpha*0.35*target_lab[0]) * mask
+    else:
+        lab_new = lab*(1-mask_3) + (lab*(1-alpha) + alpha*target_lab.reshape(1,1,3)) * mask_3
+
+    # Convert back to RGB/BGR
+    rgb_new = color.lab2rgb(lab_new)  # returns floats 0..1
+    rgb_new = np.clip(rgb_new, 0, 1)
+    bgr_new = cv2.cvtColor((rgb_new*255).astype(np.uint8), cv2.COLOR_RGB2BGR)
+    return bgr_new
