@@ -3,13 +3,14 @@ import mediapipe as mp
 import numpy as np
 mp_face_mesh = mp.solutions.face_mesh
 
+# np.uint8 -> mem-efficient img processing and data analysis
 #---------------------------------------------------------------------
 
 #-------------#
 #| FACE MASK |#
 #-------------#
 
-def get_face_mask(img):
+def get_face_mask(img: np.ndarray) -> np.ndarray:
     #later change to BiSeNet so as to properly remove eyes and lips
     """ 
     Description
@@ -19,10 +20,12 @@ def get_face_mask(img):
 
     ------------------
     Parameters
-        img: np.ndarray - input image in RGB format
+        img: np.ndarray
+            Input image in RGB format
     ---------
     Returns
-        mask: np.ndarray - same size as input, non-skin areas set to [128,128,128] (gray)
+        mask: np.ndarray 
+            Same size as input, non-skin areas set to [128,128,128] (gray)
     """
     # Initialize face mesh
     with mp_face_mesh.FaceMesh(
@@ -68,16 +71,16 @@ def get_face_mask(img):
             ])
 
         face_outline = get_points(face_outline_idx)#face_outline_idx
-        left_eye = get_points(left_eye_idx)
-        right_eye = get_points(right_eye_idx)
-        lips = get_points(lips_idx)
+        #left_eye = get_points(left_eye_idx)
+        #right_eye = get_points(right_eye_idx)
+        #lips = get_points(lips_idx)
 
 
         # ---- Create base mask ---- #
         mask = np.zeros((h, w), dtype=np.uint8)
         cv2.fillPoly(mask, [face_outline], 255)  # fill outer face area
 
-        # Remove eyes and lips from mask
+        # Remove eyes and lips from mask #fais drastically
         #cv2.fillPoly(mask, [left_eye], 0)
         #cv2.fillPoly(mask, [right_eye], 0)
         #cv2.fillPoly(mask, [lips], 0)
@@ -102,11 +105,12 @@ def get_face_mask(img):
 #| COLOUR SHIFT |#
 #----------------#
 
-def shift_skin_color(face_img, color):
+def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 255, 0)) -> np.ndarray :
     """ 
     Description
         Given a masked_face (skin visible, background gray), recolors the skin toward 'color'
-    while preserving lightness and shade differences.
+        while preserving lightness and shade differences.
+        (Improve explanation -> mention lab and vector)
 
     ------------------
     Parameters
@@ -116,9 +120,36 @@ def shift_skin_color(face_img, color):
             Target RGB color, e.g. (0, 255, 0) for green.
     ---------
     Returns
-        painted_face: type - altered version of face_img with skin color as 'color'
+        painted_face : np.ndarray
+            Face image with shifted skin tones.
     """
-    return 
+
+    # Convert to LAB (perceptually uniform color space)
+    lab = cv2.cvtColor(face_img, cv2.COLOR_RGB2LAB)
+    mask = np.any(face_img != [128, 128, 128], axis=-1)  # true for skin pixels only
+
+    # Get mean LAB of current skin tone -> maby change to median?
+    mean_lab = np.mean(lab[mask], axis=0)
+
+    # Convert target color to LAB
+    target_lab = cv2.cvtColor(
+        np.uint8([[color]]), cv2.COLOR_RGB2LAB
+    )[0, 0].astype(np.float32)
+
+    # Compute shift vector
+    delta = target_lab - mean_lab
+
+    # Apply shift only to skin pixels
+    shifted = lab.astype(np.float32)
+    for c in range(3):
+        shifted[..., c][mask] += delta[c]
+    
+    # Clip and convert back to uint8
+    shifted = np.clip(shifted, 0, 255).astype(np.uint8)
+    painted_face = cv2.cvtColor(shifted, cv2.COLOR_LAB2RGB)
+
+    return painted_face
+
 
 #--------------#
 #| SKIN PAINT |#
