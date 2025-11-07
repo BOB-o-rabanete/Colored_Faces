@@ -105,7 +105,15 @@ def get_face_mask(img: np.ndarray) -> np.ndarray:
 #| COLOUR SHIFT |#
 #----------------#
 
-def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 255, 0)) -> np.ndarray :
+"""
+For pastel or non-realistic colors, lower delta by multiplying it (e.g. 0.8 * delta) to avoid clipping.
+
+For more realism, you can add a mild blur to the LAB channels before conversion back.
+
+To simulate “lighter” or “darker” versions of the same color, adjust the L channel separately.
+"""
+
+def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.ndarray :
     """ 
     Description
         Given a masked_face (skin visible, background gray), recolors the skin toward 'color'
@@ -154,3 +162,49 @@ def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 255, 0)) -> np.nda
 #--------------#
 #| SKIN PAINT |#
 #--------------#
+
+"""
+Criar uma segunda, mais âmpla máscara
+
+arranjar um meio termo entre as cores existentes e a nova para não haver uma tão grande discrepância
+"""
+def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False) -> np.ndarray:
+    """ 
+    Description
+        Given an image, returns a version of it with a painted face.
+
+    ------------------
+    Parameters
+        img : np.ndarray
+            Input image in RGB format.
+        color : tuple or list of int
+            Target RGB color, e.g. (0, 255, 0) for green.
+        bgr : bool
+            defines if output img is in BGR or RGB
+    ---------
+    Returns
+        painted_face : np.ndarray
+            Image with face with shifted skin tones.
+    """
+
+    # Get RGB format~
+    if img.shape[2] == 3:
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    else:
+        img_rgb = img.copy()
+
+    # Get mask
+    masked_face = get_face_mask(img_rgb)
+    # Create binary mask for skin areas (everything except gray background)
+    skin_mask = np.any(masked_face != [128, 128, 128], axis=-1)
+
+    # Paint mask
+    colored_face_mask = shift_skin_color(masked_face, color)
+
+    # Get altered image
+    painted_face = img_rgb.copy()
+    painted_face[skin_mask] = colored_face_mask[skin_mask]
+    if bgr:
+        painted_face = cv2.cvtColor(painted_face, cv2.COLOR_RGB2BGR)
+
+    return painted_face
