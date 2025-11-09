@@ -101,6 +101,7 @@ def get_face_mask(img: np.ndarray) -> np.ndarray:
     
     return None
 
+
 #----------------#
 #| COLOUR SHIFT |#
 #----------------#
@@ -159,6 +160,48 @@ def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.nda
     return painted_face
 
 
+def smooth_borderline(og_img: np.ndarray, new_img: np.ndarray, mask: np.ndarray, blur_radius: int = 25) -> np.ndarray:
+    """
+    Description
+        Smooths the transition between the recolored face (inside mask)
+        and the original background, to avoid sharp edges.
+
+    ------------------
+    Parameters
+        original_img : np.ndarray
+            Original RGB image.
+        recolored_img : np.ndarray
+            Image with recolored face (same dimensions as original).
+        mask : np.ndarray
+            Binary mask of face region (True or 1 = face pixels).
+        blur_radius : int
+            Strength of the smoothing (Gaussian kernel size, must be odd).
+    ---------
+    Returns
+        blended_img : np.ndarray
+            Image with smooth transition between recolored and original.
+
+    """
+
+    # for blending, need to be float [0,1]
+    img_new = new_img.astype(np.float32)
+    img_og = og_img.astype(np.float32)
+    if mask.dtype != np.bool_:
+        mask = mask.astype(bool) #change this into 
+    mask_float = mask.astype(np.float32)
+
+    # Gaussian Blur to soften mask's edges
+    soft_mask = cv2.GaussianBlur(mask_float, (blur_radius, blur_radius), 0)
+
+    # Expand mask to 3 channels
+    soft_mask = np.expand_dims(soft_mask, axis=-1)
+
+    blended = img_new * soft_mask+img_og*(1-soft_mask)
+    blended_img = np.clip(blended, 0, 255).astype(np.uint8)
+
+    return blended_img    
+
+
 #--------------#
 #| SKIN PAINT |#
 #--------------#
@@ -168,7 +211,7 @@ Criar uma segunda, mais âmpla máscara
 
 arranjar um meio termo entre as cores existentes e a nova para não haver uma tão grande discrepância
 """
-def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False) -> np.ndarray:
+def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: float = -1.0) -> np.ndarray:
     """ 
     Description
         Given an image, returns a version of it with a painted face.
@@ -181,6 +224,8 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False) -> np.nd
             Target RGB color, e.g. (0, 255, 0) for green.
         bgr : bool
             defines if output img is in BGR or RGB
+        smooth : float (optional)
+            represents the blur radius, when positive creates a smoother merge between the colored face and the background
     ---------
     Returns
         painted_face : np.ndarray
@@ -194,16 +239,20 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False) -> np.nd
         img_rgb = img.copy()
 
     # Get mask
-    masked_face = get_face_mask(img_rgb)
+    masked_face = get_face_mask(img_rgb) 
     # Create binary mask for skin areas (everything except gray background)
     skin_mask = np.any(masked_face != [128, 128, 128], axis=-1)
 
     # Paint mask
     colored_face_mask = shift_skin_color(masked_face, color)
 
-    # Get altered image
-    painted_face = img_rgb.copy()
+    # Get altered image / Smoothing -> optional
+    if smooth>0:
+        painted_face = smooth_borderline(img_rgb, colored_face_mask, skin_mask, blur_radius=smooth)
+    else:
+        painted_face = img_rgb.copy()
     painted_face[skin_mask] = colored_face_mask[skin_mask]
+
     if bgr:
         painted_face = cv2.cvtColor(painted_face, cv2.COLOR_RGB2BGR)
 
