@@ -160,46 +160,55 @@ def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.nda
     return painted_face
 
 
-def smooth_borderline(og_img: np.ndarray, new_img: np.ndarray, mask: np.ndarray, blur_radius: int = 25) -> np.ndarray:
+def smooth_borderline(new_img: np.ndarray, mask_img: np.ndarray, blur_radius: int = 35) -> np.ndarray:
     """
     Description
-        Smooths the transition between the recolored face (inside mask)
-        and the original background, to avoid sharp edges.
+        Diffuses the color of the recolored skin slightly into the nearby background
+        to create a smoother, more natural transition without bright halo artifacts.
 
     ------------------
     Parameters
-        original_img : np.ndarray
-            Original RGB image.
-        recolored_img : np.ndarray
-            Image with recolored face (same dimensions as original).
-        mask : np.ndarray
-            Binary mask of face region (True or 1 = face pixels).
+        new_img : np.ndarray
+            Image with recolored face (RGB format).
+        mask_img : np.ndarray
+            Masked image used to produce recoloring (background = [128,128,128]).
         blur_radius : int
-            Strength of the smoothing (Gaussian kernel size, must be odd).
+            Radius (in pixels) over which color diffusion should occur.
     ---------
     Returns
-        blended_img : np.ndarray
-            Image with smooth transition between recolored and original.
-
+        result : np.ndarray
+            Smoothed image where the border between face and background
+            gradually transitions with mixed colors.
     """
 
-    # for blending, need to be float [0,1]
-    img_new = new_img.astype(np.float32)
-    img_og = og_img.astype(np.float32)
-    if mask.dtype != np.bool_:
-        mask = mask.astype(bool) #change this into 
-    mask_float = mask.astype(np.float32)
+    # --- Prepare data - for blending need to be float [0,1]
+    img = new_img.astype(np.float32)
+    if len(mask_img.shape) == 2:  # grayscale mask
+        mask_gray = (mask_img != 128).astype(np.uint8)
+    else:
+        mask_gray = np.any(mask_img != [128, 128, 128], axis=-1).astype(np.uint8)
 
-    # Gaussian Blur to soften mask's edges
-    soft_mask = cv2.GaussianBlur(mask_float, (blur_radius, blur_radius), 0)
 
-    # Expand mask to 3 channels
-    soft_mask = np.expand_dims(soft_mask, axis=-1)
+    # --- Compute distance from non-face regions to the face contour
+    dist_to_face = cv2.distanceTransform(1 - mask_gray, cv2.DIST_L2, 5)
+    dist_to_face = np.clip(dist_to_face, 0, blur_radius)
+    dist_norm = 1 - (dist_to_face / blur_radius)  # 1 near face, 0 far away
 
-    blended = img_new * soft_mask+img_og*(1-soft_mask)
-    blended_img = np.clip(blended, 0, 255).astype(np.uint8)
+    # --- Compute average skin color
+    skin_pixels = img[mask_gray.astype(bool)]
+    if len(skin_pixels) == 0:
+        return new_img  # fallback if no skin detected
+    mean_skin_color = np.mean(skin_pixels, axis=0)
 
-    return blended_img    
+    # --- Blend pixels near the border toward the mean skin color
+    fade_mask = np.expand_dims(dist_norm, axis=-1)
+    result = img.copy()
+    result = result * (1 - fade_mask) + mean_skin_color * fade_mask
+
+    # --- Keep original skin region intact
+    result[mask_gray.astype(bool)] = img[mask_gray.astype(bool)]
+
+    return np.clip(result, 0, 255).astype(np.uint8)  
 
 
 #--------------#
@@ -232,7 +241,7 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: 
             Image with face with shifted skin tones.
     """
 
-    # Get RGB format~
+    # Get RGB format    
     if img.shape[2] == 3:
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     else:
@@ -247,13 +256,25 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: 
     colored_face_mask = shift_skin_color(masked_face, color)
 
     # Get altered image / Smoothing -> optional
+    """
     if smooth>0:
-        painted_face = smooth_borderline(img_rgb, colored_face_mask, skin_mask, blur_radius=smooth)
+        smooth = (smooth//2)*2 + 1 #must be odd
+        painted_face = smooth_borderline(colored_face_mask, skin_mask, blur_radius=smooth)
     else:
         painted_face = img_rgb.copy()
+        painted_face[skin_mask] = colored_face_mask[skin_mask]
+
+    if bgr:
+        painted_face = cv2.cvtColor(painted_face, cv2.COLOR_RGB2BGR)
+    """
+    painted_face = img_rgb.copy()
     painted_face[skin_mask] = colored_face_mask[skin_mask]
 
     if bgr:
         painted_face = cv2.cvtColor(painted_face, cv2.COLOR_RGB2BGR)
 
+    if smooth>0:
+        smooth = (smooth//2)*2 + 1 #must be odd
+        painted_face = smooth_borderline(painted_face, masked_face, blur_radius=smooth)
+    
     return painted_face
