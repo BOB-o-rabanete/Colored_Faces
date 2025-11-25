@@ -211,14 +211,26 @@ def smooth_borderline_og(new_img: np.ndarray, mask_img: np.ndarray, blur_radius:
     return np.clip(result, 0, 255).astype(np.uint8)  
 
 
-def delta_falloff_recolor(img_rgb, face_mask, delta, blur_radius=40):
+def delta_falloff_recolor(img_rgb: np.ndarra, face_mask: np.ndarra, delta: np.ndarray, blur_radius: int = 35):
     """
-    Smoothly extends LAB-delta recoloring outside the face,
-    fading with distance from the face boundary.
+    Description
+        Smoothly extends LAB-delta recoloring outside the face,
+        fading with distance from the face boundary.
 
-    img_rgb: original full RGB image
-    face_mask: binary (0/1) face mask
-    delta: 3-element LAB shift vector (from shift_skin_color)
+    ------------------
+    Parameters
+        img_rgb: np.ndarra
+            original full RGB image.
+        face_mask: np.ndarra
+            non-skin areas set to [128,128,128] (gray).
+        delta: np.ndarray
+            3-element LAB shift vector (from shift_skin_color).
+        blur_radius : int, optional
+            Maximum distance (in pixels) over which the recoloring fades out.
+    ---------
+    Returns
+        recolored: np.ndarra
+            The LAB-shifted + distance-faded RGB image (uint8).
     """
 
     # Convert to LAB (float for math)
