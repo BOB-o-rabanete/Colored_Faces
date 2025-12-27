@@ -211,7 +211,7 @@ def smooth_borderline_og(new_img: np.ndarray, mask_img: np.ndarray, blur_radius:
     return np.clip(result, 0, 255).astype(np.uint8)  
 
 
-def delta_falloff_recolor(img_rgb: np.ndarra, face_mask: np.ndarra, delta: np.ndarray, blur_radius: int = 35):
+def delta_falloff_recolor(img_rgb: np.ndarray, face_mask: np.ndarray, delta: np.ndarray, blur_radius: int = 35):
     """
     Description
         Smoothly extends LAB-delta recoloring outside the face,
