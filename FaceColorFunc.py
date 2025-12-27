@@ -15,7 +15,6 @@ def get_face_mask(img: np.ndarray) -> np.ndarray:
     """ 
     Description
         Given an image, crops a mask with only the skin and the rest as gray pixels
-        eyes and lips are removed
         Uses Mediapipe Face Mesh
 
     ------------------
