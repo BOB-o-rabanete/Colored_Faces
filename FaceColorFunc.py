@@ -131,6 +131,8 @@ def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.nda
     Returns
         painted_face : np.ndarray
             Face image with shifted skin tones.
+        delta: 
+        
     """
 
     # Convert to LAB (perceptually uniform color space)
