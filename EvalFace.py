@@ -126,15 +126,20 @@ def FaceDetected(img: np.ndarray, face_models: list[str] = FR_list) -> list[bool
             0 or 1 for each model depending on whether the model could or not detect a face
     """
 
+    if img.ndim == 3 and img.shape[2]==3:
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    else:
+        img_rgb = img.copy()
+        
     results = []
 
     for model in face_models:
         if model == "mediapipe":
-            results.append(detect_mediapipe(img))
+            results.append(detect_mediapipe(img_rgb))
         elif model == "dlib_hog":
-            results.append(detect_dlib_hog(img))
+            results.append(detect_dlib_hog(img_rgb))
         elif model == "mtcnn":
-            results.append(detect_mtcnn(img))
+            results.append(detect_mtcnn(img_rgb))
         else:
             raise ValueError(f"Unknown face model: {model}")
 
