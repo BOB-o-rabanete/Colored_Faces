@@ -25,6 +25,7 @@ def get_face_mask(img: np.ndarray) -> np.ndarray:
     Returns
         mask: np.ndarray 
             Same size as input, non-skin areas set to [128,128,128] (gray)
+            None if no face was found
     """
     # Initialize face mesh
     with mp_face_mesh.FaceMesh(
@@ -37,8 +38,7 @@ def get_face_mask(img: np.ndarray) -> np.ndarray:
         results = face_mesh.process(img)
         if not results.multi_face_landmarks:
             print("🐢 ---> no face detected in image.")
-            gray_bg = np.full_like(img, 128)
-            return gray_bg
+            return None
 
         # Get landmarks for the face
         h, w, _ = img.shape
@@ -292,6 +292,7 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: 
     Returns
         painted_face : np.ndarray
             Image with face with shifted skin tones.
+            None if no face was found
     """
 
     # Get RGB format    
@@ -302,6 +303,8 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: 
 
     # Get mask
     masked_face = get_face_mask(img_rgb) 
+    if masked_face is None:
+        return None
     # Create binary mask for skin areas (everything except gray background)
     skin_mask = np.any(masked_face != [128, 128, 128], axis=-1)
 
