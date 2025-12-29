@@ -222,7 +222,7 @@ def delta_falloff_recolor(img_rgb: np.ndarray, face_mask: np.ndarray, delta: np.
     Parameters
         img_rgb: np.ndarra
             original full RGB image.
-        face_mask: np.ndarra
+        face_mask: np.ndarray
             non-skin areas set to [128,128,128] (gray).
         delta: np.ndarray
             3-element LAB shift vector (from shift_skin_color).
