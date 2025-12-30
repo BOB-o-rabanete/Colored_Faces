@@ -71,6 +71,133 @@ def generalScoreModel(df: pd.DataFrame, col_list: list[str], color: list[str] = 
     
     return None
 
+def SingleColComparison(
+    og_df: pd.DataFrame,
+    color_df: pd.DataFrame,
+    col_name: list[str],
+    score_cols: list[str] = ["y_mediapipe", "y_dlib_hog", "y_mtcnn"],
+) -> None:
+    """
+    Description:
+        Given two dataframes with same col_name and score_cols,
+        calculates the percentage of binary values for each score_cols per combination of col_name uniquevalues
+        plots 3 graphs (the first occupies one row, the others share the second row)
+        the first plot displays per col_name, the diferent score_col results of the two dfs as points (d-og_df and o-color_df)
+        the second and theird are each og_df and color_df respectivelly and display the result as side-by-side bars in a grouped bar chart.
+
+    ------------------
+    Parameters:
+        og_df: pd.DataFrame
+            A dataframe that contains the results of the unaltered fotos and some extra information regarding the same.
+        color_df: pd.DataFrame
+            A dataframe that contains the results of the painted fotos and some extra information regarding the same.
+        col_name: list[str]
+            List of column names that will be aggregated to represent different x-values.
+        score_cols: list[str], optional
+            The columns must be binary.
+            The percentage of their value per different col_list combination will be represented by the y-axis.
+    -----------
+    Returns:
+        None
+            Plots 3 graphs:
+            a point graph of the percentages of score_cols instances per combination of col_name, one for both dfs.
+            two grouped bar graph of the percentage of score_cols instances per combination of col_name, one for each df.
+    """
+
+    clr_lst = {
+        "og_df": {
+            "y_mediapipe": "#5de9f3",
+            "y_dlib_hog": "#a399fb",
+            "y_mtcnn": "#52b2ee",
+        },
+        "color_df": {
+            "y_mediapipe": "#0ed8e6",
+            "y_dlib_hog": "#6454f3",
+            "y_mtcnn": "#0099f8",
+        },
+    }
+
+    def compute_percent_df(df: pd.DataFrame) -> pd.DataFrame:
+        grouped = df.groupby(col_name)[score_cols].sum()
+        total_count = df.groupby(col_name).size()
+        return grouped.div(total_count, axis=0) * 100
+
+    og_percent = compute_percent_df(og_df)
+    color_percent = compute_percent_df(color_df)
+
+    x_labels = og_percent.index.astype(str)
+    x = np.arange(len(x_labels))
+    width = 0.25
+
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 2)
+
+    # -------- Plot 1: Scatter comparison --------
+    ax0 = fig.add_subplot(gs[0, :])
+
+    for col in score_cols:
+        ax0.scatter(
+            x,
+            og_percent[col],
+            label=f"{col} (og_df)",
+            color=clr_lst["og_df"][col],
+            marker="o",
+        )
+        ax0.scatter(
+            x,
+            color_percent[col],
+            label=f"{col} (color_df)",
+            color=clr_lst["color_df"][col],
+            marker="x",
+        )
+
+    ax0.set_xticks(x)
+    ax0.set_xticklabels(x_labels, rotation=45)
+    ax0.set_ylabel("Percentage (%)")
+    ax0.set_title("Score Comparison: Original vs Color")
+    ax0.legend()
+    ax0.grid(True, axis="y", alpha=0.3)
+
+    # -------- Plot 2: Grouped bars (og_df) --------
+    ax1 = fig.add_subplot(gs[1, 0])
+
+    for i, col in enumerate(score_cols):
+        ax1.bar(
+            x + i * width,
+            og_percent[col],
+            width,
+            label=col,
+            color=clr_lst["og_df"][col],
+        )
+
+    ax1.set_xticks(x + width)
+    ax1.set_xticklabels(x_labels, rotation=45)
+    ax1.set_ylabel("Percentage (%)")
+    ax1.set_title("Original DF")
+    ax1.legend()
+    ax1.grid(True, axis="y", alpha=0.3)
+
+    # -------- Plot 3: Grouped bars (color_df) --------
+    ax2 = fig.add_subplot(gs[1, 1])
+
+    for i, col in enumerate(score_cols):
+        ax2.bar(
+            x + i * width,
+            color_percent[col],
+            width,
+            label=col,
+            color=clr_lst["color_df"][col],
+        )
+
+    ax2.set_xticks(x + width)
+    ax2.set_xticklabels(x_labels, rotation=45)
+    ax2.set_ylabel("Percentage (%)")
+    ax2.set_title("Color DF")
+    ax2.legend()
+    ax2.grid(True, axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
 
 
 
