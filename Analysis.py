@@ -157,6 +157,13 @@ def DfColorShade(
                 diff_name = col.replace(score, f"{score}_diff")
                 wide[diff_name] = wide[col] - wide[og_col]
 
+            diff_values = wide[col] - wide[og_col]
+            diff_range = diff_values.max() - diff_values.min()
+            
+            if diff_range > 0.25 * diff_values.max():
+                diff_name = col.replace(score, f"{score}_diff")
+                wide[diff_name] = diff_values
+
 
     return wide.reset_index()
 
