@@ -73,9 +73,7 @@ def DfColorShade(
     df: pd.DataFrame,
     col_name: list[str],
     score_cols: list[str] = ["y_mediapipe", "y_dlib_hog", "y_mtcnn"],
-    color_col: str = "color",
-    shade_col: str = "shade",
-    og_color: str = "og",
+    rel_thresh: float = 0.3
 ) -> pd.DataFrame:
     """
     Description:
@@ -83,90 +81,97 @@ def DfColorShade(
         calculates the percentage of binary values for each score column
         per combination of col_name, color, and shade.
 
-        Creates separate columns for each (color, shade) combination.
-        The OG color is treated as a special baseline and appears first.
+        Creates diferent columns for each (color, shade, score_cols) combination.
         Difference columns vs OG are also computed.
+        cases where the success rate variatios per color,shade combination are major or the new color matches/outperforms the original are flaged
     ------------------
     Parameters:
         df: pd.DataFrame
-            DataFrame containing color/shade variants and binary score columns.
+            A dataframe that contains the columns 'color', 'shade', 'y_mediapipe', 'y_dlib_hog', 'y_mtcnn'.
         col_name: list[str]
             Columns used as grouping keys for aggregation.
         score_cols: list[str], optional
-            Binary columns whose mean (×100) represents percentage scores.
-        color_col : str, optional
-            Column name identifying color categories.
-        shade_col : str, optional
-            Column name identifying shade categories.
-        og_color : str, optional
-            Baseline color label used for ordering and difference calculations.
-            
+            Binary columns whose mean (×100) represents percentage scores.            
+        rel_thresh: float, optional
+            the minimal diff between max and mind diff of two colomns to flag 
     -----------
     Returns:
         pd.DataFrame
-            A wide-format dataframe where each row corresponds to a unique
-            combination of 'col_name'.
+            A dataframe where each columnn corresponds to a unique combination of 'score_cols'_'color'_'sade' 
+            and each row to a uniquevalue of col_names.
+            If 'score_cols'_'color'_'sade' of colors har equal or better tnah 'score_cols'_'og' or if the difference between the two columns detects values with high diviation between them
+            those columns are also added as 'score_cols'_'color'_'sade'_diff
         
     """
 
-    df = df.copy()
-
-    # --- Create a unified color_shade label --- #
-    df["color_shade"] = np.where(
-        df[color_col] == og_color,
-        og_color,
-        df[color_col] + "_" + df[shade_col]
-    )
-
-    # --- Aggregate percentages --- #
-    agg = (
-        df
-        .groupby(col_name + ["color_shade"])[score_cols]
+    og_scores  = (
+        df[df["color"] == "og"]
+        .groupby(col_name)[score_cols]
         .mean()
         .mul(100)
     )
 
-    # --- Pivot to wide format --- #
-    wide = (
-        agg
-        .unstack("color_shade")
-    )
+    base = og_scores.copy()
 
-    wide.columns = [
-        f"{score}_{cs}"
-        for score, cs in wide.columns
-    ]
+    new_cols = {}          # stores all generated columns
+    diff_flag_map = {}     # diff → flag mapping
 
-    # --- Ensure OG columns come first --- #
-    og_cols = [c for c in wide.columns if c.endswith(f"_{og_color}")]
-    other_cols = [c for c in wide.columns if c not in og_cols]
-    wide = wide[og_cols + other_cols]
-
-    # --- Compute differences vs OG --- #
-    for score in score_cols:
-        og_col = f"{score}_{og_color}"
-
-        if og_col not in wide.columns:
+    for color in df["color"].unique():
+        if color == "og":
             continue
 
-        for col in wide.columns:
-            if not col.startswith(score) or col == og_col:
+        for shade in ["dark", "light"]:
+            shade_df = df[
+                (df["color"] == color) &
+                (df["shade"] == shade)
+            ]
+
+            if shade_df.empty:
                 continue
 
-            if (wide[col] >= wide[og_col]).any():
-                diff_name = col.replace(score, f"{score}_diff")
-                wide[diff_name] = wide[col] - wide[og_col]
+            vals = (
+                shade_df.groupby(col_name)[score_cols]
+                .mean()
+                .mul(100)
+                .reindex(og_scores.index)
+            )
 
-            diff_values = wide[col] - wide[og_col]
-            diff_range = diff_values.max() - diff_values.min()
-            
-            if diff_range > 0.25 * diff_values.max():
-                diff_name = col.replace(score, f"{score}_diff")
-                wide[diff_name] = diff_values
+            for score in score_cols:
+                new_col = f"{score}_{color}_{shade}"
+                diff_col = f"{new_col}_diff"
+                flag_col = f"{new_col}_flag"
 
+                new_vals = vals[score]
+                diff_vals = new_vals - base[score]
+                
+                rel_var = (
+                    diff_vals.abs() /
+                    base[score].replace(0, np.nan)
+                )
+                flag_vals = (
+                    (new_vals >= base[score]) |
+                    (rel_var >= rel_thresh)
+                )
 
-    return wide.reset_index()
+                new_cols[new_col] = new_vals
+                new_cols[diff_col] = diff_vals
+                new_cols[flag_col] = flag_vals
 
+                diff_flag_map[diff_col] = flag_col
+    
+    merged = pd.concat([base, pd.DataFrame(new_cols, index=base.index)], axis=1)
+
+    cols_to_drop = [
+        diff for diff, flag in diff_flag_map.items()
+        if merged[flag].any()
+    ]
+
+    merged.drop(columns=cols_to_drop, inplace=True)
+
+    flag_cols = [c for c in merged.columns if c.endswith("_flag")]
+    merged.drop(columns=flag_cols, inplace=True)
+
+    return merged
 
 
 
