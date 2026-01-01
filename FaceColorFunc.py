@@ -298,18 +298,6 @@ def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: 
     # Paint mask
     colored_face_mask, delta = shift_skin_color(masked_face, color)
 
-    # Get altered image / Smoothing -> optional
-    """
-    if smooth>0:
-        smooth = (smooth//2)*2 + 1 #must be odd
-        painted_face = smooth_borderline(colored_face_mask, skin_mask, blur_radius=smooth)
-    else:
-        painted_face = img_rgb.copy()
-        painted_face[skin_mask] = colored_face_mask[skin_mask]
-
-    if bgr:
-        painted_face = cv2.cvtColor(painted_face, cv2.COLOR_RGB2BGR)
-    """
     painted_face = img_rgb.copy()
     painted_face[skin_mask] = colored_face_mask[skin_mask]
 
