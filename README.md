@@ -85,6 +85,8 @@ This project was developed using **Python** and **Jupyter Notebook**.
    ```bash
    pip install -r requirements.txt
 
+Exact package versions may vary depending on platform-specific installation constraints (notably for **dlib** and **tensorflow**). The versions listed in **requirements.txt** correspond to tested, compatible configurations.
+
 ---
 
 ### Ethical Note

@@ -1,0 +1,15 @@
+Python==3.10.1
+numpy==1.26.4
+pandas==2.3.3
+opencv-python==4.11.0.86
+matplotlib==3.10.7
+seaborn==0.13.2
+scikit-learn==1.4.2
+mediapipe==0.10.21
+mtcnn==1.0.0
+tensorflow==2.15.0
+dlib==19.24.6
+Pillow==10.2.0
+tqdm==4.67.1
+torch==2.2.2
+jupyter==1.0.0
