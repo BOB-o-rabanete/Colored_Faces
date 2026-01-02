@@ -4,10 +4,6 @@
 
 </div>
 
-<p align="center" width="100%">
-    <!-- Optional: replace with a representative figure from your project -->
-    <img src="./figures/example_faces.png" width="55%" />
-</p>
 
 <div align="center">
     <img src="https://img.shields.io/badge/Made%20with-Python-306998?style=for-the-badge&logo=python&logoColor=white">
@@ -78,17 +74,6 @@ From a socio-technical perspective, these results emphasize that **robustness to
 
 ---
 
-## Repository Structure
-
-.
-├── notebook.ipynb # Main analysis notebook
-├── figures/ # Generated plots and visualizations
-├── report.tex # Final LaTeX report (RevTeX format)
-├── README.md # Project documentation
-└── requirements.txt # Python dependencies
-
----
-
 ## Dependencies & Execution
 
 This project was developed using **Python** and **Jupyter Notebook**.
@@ -99,6 +84,13 @@ This project was developed using **Python** and **Jupyter Notebook**.
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
+
+---
+
+### Ethical Note
+
+This work is intended for academic research and analysis.
+The findings highlight how design and training choices in face recognition systems can unintentionally encode bias, reinforcing the importance of transparency, dataset balance, and fairness-aware evaluation.
 
 ---
 
