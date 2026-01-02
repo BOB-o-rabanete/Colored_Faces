@@ -99,7 +99,7 @@ The findings highlight how design and training choices in face recognition syste
 ## Authorship
 
 - **Author** &#8594; [Daniela Osório](https://github.com/BOB-o-rabanete)
-- **Course** &#8594; Artificial Inteligen and Society
+- **Course** &#8594; Artificial Intelligence and Society
   [[M.IA001](https://sigarra.up.pt/fcup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=559505)]
 - **Universitys** &#8594; Faculty of Sciences and Faculty of Engineering, University of Porto 
 
