@@ -92,14 +92,6 @@ def get_face_mask(img: np.ndarray) -> np.ndarray:
 #| COLOUR SHIFT |#
 #----------------#
 
-"""
-For pastel or non-realistic colors, lower delta by multiplying it (e.g. 0.8 * delta) to avoid clipping.
-
-For more realism, you can add a mild blur to the LAB channels before conversion back.
-
-To simulate “lighter” or “darker” versions of the same color, adjust the L channel separately.
-"""
-
 def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.ndarray :
     """ 
     Description
@@ -128,12 +120,12 @@ def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.nda
     # Get mean LAB of current skin tone -> maby change to median?
     mean_lab = np.mean(lab[mask], axis=0)
 
-    # Convert target color to LAB
+    # ------- Convert to LAB ------- #
     target_lab = cv2.cvtColor(
         np.uint8([[color]]), cv2.COLOR_RGB2LAB
     )[0, 0].astype(np.float32)
 
-    # Compute shift vector
+    # ------- shift vector ------- #
     delta = target_lab - mean_lab
 
     # Apply shift only to skin pixels
@@ -141,7 +133,6 @@ def shift_skin_color(face_img: np.ndarray, color: tuple = (0, 120, 0)) -> np.nda
     for c in range(3):
         shifted[..., c][mask] += delta[c]
     
-    # Clip and convert back to uint8
     shifted = np.clip(shifted, 0, 255).astype(np.uint8)
     painted_face = cv2.cvtColor(shifted, cv2.COLOR_LAB2RGB)
 
@@ -255,11 +246,6 @@ def delta_falloff_recolor(img_rgb: np.ndarray, face_mask: np.ndarray, delta: np.
 #| SKIN PAINT |#
 #--------------#
 
-"""
-Criar uma segunda, mais âmpla máscara
-
-arranjar um meio termo entre as cores existentes e a nova para não haver uma tão grande discrepância
-"""
 def change_face_color(img: np.ndarray, color: tuple, bgr: bool = False, smooth: float = -1.0) -> np.ndarray:
     """ 
     Description
