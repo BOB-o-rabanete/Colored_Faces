@@ -25,7 +25,7 @@
 
 ## Project Background
 
-Face recognition systems are increasingly deployed in socially sensitive contexts, yet their robustness to variations in appearance—particularly skin color—remains uneven. This project investigates how **synthetic skin color manipulation**, applied independently of facial geometry, affects the performance and fairness of face recognition models. By isolating color from structure, the study aims to identify whether models encode identity through invariant facial features or rely on chromatic and texture-based cues that may introduce bias.
+Face recognition systems are increasingly deployed in socially sensitive contexts, yet their robustness to variations in appearance, particularly skin color, remains uneven. This project investigates how **synthetic skin color manipulation**, applied independently of facial geometry, affects the performance and fairness of face recognition models. By isolating color from structure, the study aims to identify whether models encode identity through invariant facial features or rely on chromatic and texture-based cues that may introduce bias.
 
 ---
 
@@ -79,4 +79,33 @@ From a socio-technical perspective, these results emphasize that **robustness to
 ---
 
 ## Repository Structure
+
+.
+├── notebook.ipynb # Main analysis notebook
+├── figures/ # Generated plots and visualizations
+├── report.tex # Final LaTeX report (RevTeX format)
+├── README.md # Project documentation
+└── requirements.txt # Python dependencies
+
+---
+
+## Dependencies & Execution
+
+This project was developed using **Python** and **Jupyter Notebook**.
+
+### Setup Instructions
+
+1. Create a virtual environment (recommended).
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+
+---
+
+## Authorship
+
+- **Author** &#8594; [Daniela Osório](https://github.com/BOB-o-rabanete)
+- **Course** &#8594; Artificial Inteligen and Society
+  [[M.IA001](https://sigarra.up.pt/fcup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=559505)]
+- **Universitys** &#8594; Faculty of Sciences and Faculty of Engineering, University of Porto 
 
