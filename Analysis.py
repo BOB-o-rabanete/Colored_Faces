@@ -540,3 +540,129 @@ def colorShadeColumn(df: pd.DataFrame, col_list: list[str], split: str = "color"
     plt.show()
 
     return None
+
+
+def dotsColorShadeModel(
+        og_df: pd.DataFrame, 
+        color_df: pd.DataFrame,
+        col_name: list[str],
+        score_cols: list[str]= ["y_mediapipe", "y_dlib_hog", "y_mtcnn"],
+) -> None:
+    """
+    Description:
+        Given two dataframes with same col_name and score_cols,
+        calculates the percentage of binary values for each score_cols per combination of col_name unique values
+        plots n graphs (one for each element on score_cols)
+        each plot displays per col_name, the different results of each color_shade possible combinations vs the one on og_df the score_cols element
+        (d-og_df, o-for each color_light and x-for each color_dark)
+
+    ------------------
+    Parameters:
+        og_df: pd.DataFrame
+            A dataframe that contains the results of the unaltered photos and some extra information regarding the same.
+        color_df: pd.DataFrame
+            A dataframe that contains the results of the painted photos and some extra information regarding the same.
+        col_name: list[str]
+            List of column names that will be aggregated to represent different x-values.
+        score_cols: list[str], optional
+            The columns must be binary.
+            The percentage of their value per different col_list combination will be represented by the y-axis.
+    -----------
+    Returns:
+        None
+            Plots n graphs:
+            a point graph of the percentages of score_cols instances per combination of col_name_color_shade, 
+            one for each element of score_cols.
+    """
+
+    clr_lst = {
+        'Red': {"dark":["#C82909", "#701705", "#440E03"],
+                "light": ["#F54927", "#F87C63", "#FCC6BB"]},
+        'yellow': {"light":["#F8CB63", "#F4AE0B", "#D3F527"],
+                   "dark": ["#C8A509", "#9C8107", "#839C07"]},
+        'green': {"light":["#98FA8F", "#38F527", "#76F527"],
+                  "dark": ["#079C0A", "#09C816", "#409C07"]},
+        'blue': {"light":["#27F5C5", "#63DAF8", "#63F8F3"],
+                 "dark": ["#26997E", "#09A2C8", "#008C88"]},
+        'indigo': {"light":["#7286E9", "#365AF7", "#5032F0"],
+                   "dark": ["#2A41B0", "#07229D", "#3112E3"]},
+        'roxo': {"light":["#C567F4", "#B43EEF", "#D548E5"],
+                 "dark": ["#690B98", "#4B096D", "#5E0F67"]},
+        'og': "#000000",
+    }
+
+    og_percent = (
+        og_df
+        .groupby(col_name)[score_cols]
+        .mean()
+        .mul(100)
+    )
+    color_percent = (
+        color_df
+        .groupby(col_name+ ['color', 'shade'])[score_cols]
+        .mean()
+        .mul(100)
+    )
+
+    # --- X axis --- #
+    x_labels = og_percent.index.astype(str)
+    x = np.arange(len(x_labels))
+
+    # --- Plot one figure per score column --- #
+    fig, axes = plt.subplots(len(score_cols), 2, figsize=(16, 5 * len(score_cols)), sharex=True)
+
+    if len(score_cols) == 1:
+        axes = [axes]
+
+    color_group_1 = ['Red', 'yellow', 'green']
+    color_group_2 = ['blue', 'indigo', 'roxo']
+
+    for ax_row, score in zip(axes, score_cols):
+        for idx, ax in enumerate(ax_row):
+            if idx == 0:
+                color_group = color_group_1
+            else:
+                color_group = color_group_2
+
+            ax.scatter(
+                x,
+                og_percent[score],
+                label="Original",
+                color=clr_lst["og"],
+                marker="o",
+                s=90,
+                linewidths=2,
+            )
+
+            for color in color_group:
+                for shade in ["light", "dark"]:
+                    color_code = clr_lst[color][shade][0]  
+                    for (cols, color_shade, shade_name), row in color_percent[score].items():
+                        if color_shade == color and shade_name == shade:
+                            idx = og_percent.index.get_loc(cols)
+                            ax.scatter(
+                                idx,
+                                row,
+                                color=color_code,
+                                marker="x" if shade == 'light' else "d",
+                                s=90,
+                                linewidths=3 if shade == 'light' else 2,
+                                label=f"{color} ({shade})"
+                            )
+
+            ax.set_xticks(x)
+            ax.set_xticklabels(x_labels, rotation=45, ha="right")
+            ax.set_ylabel("Percentage (%)")
+            ax.set_title(f"{score} – Original vs Color/Shade")
+            ax.grid(axis="y", alpha=0.3)
+
+            # Remove duplicate legend entries
+            handles, labels = ax.get_legend_handles_labels()
+            unique = dict(zip(labels, handles))
+            ax.legend(unique.values(), unique.keys(), bbox_to_anchor=(1.02, 1), loc="upper left")
+
+    plt.tight_layout()
+    plt.show()
+
+    return
+
